@@ -4,13 +4,43 @@ Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
 Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
 This file creates your application.
 """
-
+import os
 from app import app
-from flask import render_template, request
+from flask import render_template, request, jsonify
+from app.forms import UploadForm
+from werkzeug.utils import secure_filename
 
 ###
 # Routing for your application.
 ###
+
+@app.route('/api/upload', methods = ['POST'])
+def upload():
+    """Render the website's upload page."""
+    uploadform = UploadForm()
+
+    if request.method == 'POST':
+        if uploadform.validate_on_submit():
+
+            description = uploadform.description.data
+            photo = uploadform.photo.data
+
+            filename = secure_filename(photo.filename)
+            photo.save(os.path.join(
+                app.config['UPLOAD_FOLDER'], filename
+            ))
+
+            formdata = {
+                "message": "File Upload Successful",
+                "filename": filename,
+                "description": description
+            }
+            return jsonify(formdata=formdata)
+        else:
+            errordata = {
+                "errors": form_errors(uploadform)
+            }
+            return jsonify(errordata=errordata)
 
 
 # Please create all new routes and view functions above this route.
@@ -23,11 +53,9 @@ def index(path):
     Because we use HTML5 history mode in vue-router we need to configure our
     web server to redirect all routes to index.html. Hence the additional route
     "/<path:path".
-
     Also we will render the initial webpage and then let VueJS take control.
     """
     return render_template('index.html')
-
 
 # Here we define a function to collect form errors from Flask-WTF
 # which we can later use
